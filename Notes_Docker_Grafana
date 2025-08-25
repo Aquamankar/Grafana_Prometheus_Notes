@@ -146,3 +146,80 @@ or
 
 docker pull prom/prometheus
 docker pull grafana/grafana
+
+
+
+----------------------------------------------------------------------------------------------------------------------------------------
+
+
+✅ Step 1: Verify containers are running
+
+Run:
+
+docker ps
+
+
+You should see something like:
+
+CONTAINER ID   IMAGE              NAMES
+abcd1234       prom/prometheus    prometheus
+efgh5678       grafana/grafana    grafana
+
+✅ Step 2: Check Prometheus
+
+Open your browser and go to:
+👉 http://localhost:9090
+
+This is Prometheus UI.
+
+Go to Status → Targets.
+
+You should see one target like host.docker.internal:8080/actuator/prometheus with status UP.
+(If it’s DOWN, it means your Spring Boot app isn’t running yet.)
+
+✅ Step 3: Start your Spring Boot app
+
+Run your Spring Boot app normally:
+
+mvn spring-boot:run
+
+
+(or from IntelliJ/Eclipse).
+
+Make sure it’s running on port 8080.
+Now Prometheus can scrape metrics from:
+👉 http://localhost:8080/actuator/prometheus
+
+✅ Step 4: Configure Grafana
+
+Open Grafana at 👉 http://localhost:3000
+
+Login: admin / admin (then set new password).
+
+Go to Connections → Data Sources → Add data source.
+
+Choose Prometheus.
+
+URL: http://prometheus:9090
+
+Save & Test → should say Data source is working.
+
+Go to Dashboards → Import.
+
+Enter 4701 (official Spring Boot Micrometer dashboard ID).
+
+Load → Select Prometheus as the data source → Import.
+
+✅ Step 5: Explore Metrics
+
+Now you’ll see:
+
+JVM memory usage
+
+CPU load
+
+HTTP request metrics
+
+Database connections
+
+all visualized in Grafana 🎉.
