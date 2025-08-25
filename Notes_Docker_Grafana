@@ -1,0 +1,148 @@
+1. Add Spring Boot Actuator + Micrometer
+
+First, you need to expose metrics from your Spring Boot app.
+
+👉 In pom.xml:
+
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+
+<dependency>
+    <groupId>io.micrometer</groupId>
+    <artifactId>micrometer-registry-prometheus</artifactId>
+</dependency>
+
+
+👉 In application.properties:
+
+management.endpoints.web.exposure.include=*
+management.endpoint.prometheus.enabled=true
+management.metrics.export.prometheus.enabled=true
+
+
+Now, when you run your app, metrics will be exposed at:
+
+http://localhost:8080/actuator/prometheus
+
+2. Create prometheus.yml
+
+Prometheus needs to scrape your Spring Boot metrics.
+
+Create a file prometheus.yml in your project root:
+
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'spring-boot-app'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+
+
+⚠️ Note:
+
+host.docker.internal is used so Prometheus inside Docker can reach your local Spring Boot app.
+
+If you later run Spring Boot inside Docker too, you’ll use the container name instead.
+
+3. Create docker-compose.yml
+
+Now spin up Prometheus + Grafana with Docker Compose.
+
+version: '3.8'
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+4. Start Containers
+
+Run:
+
+docker-compose up -d
+
+
+Prometheus → http://localhost:9090
+
+Grafana → http://localhost:3000
+
+(Default login: admin/admin)
+
+5. Configure Grafana
+
+Log in to Grafana.
+
+Go to Connections → Data Sources → Add new data source.
+
+Choose Prometheus.
+
+URL: http://prometheus:9090
+
+Save & Test.
+
+Import dashboards:
+
+Go to Dashboards → Import.
+
+Use Spring Boot Micrometer dashboard (ID: 4701)
+.
+
+✅ Now you’ll see Spring Boot metrics (JVM, HTTP requests, DB connections, etc.) in Grafana.
+
+👉 Do you want me to also show you how to run your Spring Boot app inside the same Docker Compose file, so everything (app + Prometheus + Grafana) runs together?
+
+You said:
+does docker automatocally pull this images when up used 
+ChatGPT said:
+
+Yes ✅
+
+When you run
+
+docker-compose up -d
+
+
+Docker checks if the required images (prom/prometheus, grafana/grafana) are already available locally.
+
+If not found locally, Docker automatically pulls them from Docker Hub.
+
+If already present, it just uses the cached local image.
+
+Example flow you’ll see in terminal logs the first time:
+
+Pulling prometheus (prom/prometheus:latest)...
+latest: Pulling from prom/prometheus
+Digest: sha256:xxxx
+Status: Downloaded newer image for prom/prometheus:latest
+Pulling grafana (grafana/grafana:latest)...
+latest: Pulling from grafana/grafana
+Digest: sha256:yyyy
+Status: Downloaded newer image for grafana/grafana:latest
+Creating prometheus ... done
+Creating grafana     ... done
+
+
+👉 After the first time, if you just do docker-compose up -d again, it won’t pull unless you explicitly run:
+
+docker-compose pull
+
+
+or
+
+docker pull prom/prometheus
+docker pull grafana/grafana
